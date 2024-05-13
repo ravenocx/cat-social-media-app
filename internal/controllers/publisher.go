@@ -47,6 +47,19 @@ func PublishToRabbitMQ(cm *models.CatMatch) error {
 		return err
 	}
 
+	qu, err := ch.QueueDeclare(
+		"log", // name
+		true,   // durable
+		false,   // delete when unused
+		false,   // exclusive
+		false,   // no-wait
+		nil,     // arguments
+	)
+
+	if err != nil {
+		return err
+	}
+
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
 	defer cancel()
@@ -66,7 +79,22 @@ func PublishToRabbitMQ(cm *models.CatMatch) error {
 			DeliveryMode: amqp.Persistent,
 			ContentType: "application/json",
 			Body:        body,
-		})
+	})
+
+	if err != nil {
+		return err
+	}
+
+	err = ch.PublishWithContext(ctx,
+		"",     // exchange
+		qu.Name, // routing key
+		false,  // mandatory
+		false,  // immediate
+		amqp.Publishing{
+			DeliveryMode: amqp.Persistent,
+			ContentType: "application/json",
+			Body:        body,
+	})
 	if err != nil {
 		return err
 	}
